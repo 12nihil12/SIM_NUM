@@ -1,7 +1,7 @@
 #include <iostream> 
 #include <fstream>
 #include <cmath>
-#include "../../rand_gen/random.h"
+#include "../rand_gen/random.h"
 
 using namespace std;
 
@@ -15,13 +15,13 @@ int main (int argc, char *argv[]){
     Random rnd;
     int seed[4];
     int p1, p2;
-    ifstream Primes("../../rand_gen/Primes");
+    ifstream Primes("../rand_gen/Primes");
     if (Primes.is_open()){
         Primes >> p1 >> p2 ;
     } else cerr << "PROBLEM: Unable to open Primes" << endl;
     Primes.close();
 
-    ifstream input("../../rand_gen/seed.in");
+    ifstream input("../rand_gen/seed.in");
     string property;
     if (input.is_open()){
         while ( !input.eof() ){
@@ -36,48 +36,62 @@ int main (int argc, char *argv[]){
 
     /**********************************************************************************/
 
+    //Parametri 
 
     int M=100; //sotto-intervalli
     int n=10000; //quantità di numeri random estratta per test
-    int R=100;  //numero test 
+    int R=10000;  //numero test (maggiore di quanto richiesto (R=100) per poter impostare un confronto con la distribuzione teorica)
 
-    double squares_sum=0; 
-    int index=0;
-    int counter[M]; //contatore per i sottointervalli
 
-    //setta il contatore a 0
-   
+    /**********************************************************************************/
+
+
+    //Gestione output risultati
 
     ofstream save_results; 
     save_results.open("results.csv");
-    save_results << "chi_squared"    << endl;
-   
 
     if (!save_results.is_open()){
+        cout << "Problemi con l'apertura del file di output" << endl; 
         return 0; 
     }
 
-    for (int r=0;r<R;r++){
-        squares_sum=0;
+    save_results << "chi2"    << endl; 
+
+    /**********************************************************************************/
+
+    //variabili di servizio
+
+    double squares_sum; 
+    int index;
+    int counter[M]; //contatore per i sottointervalli
+   
+
+    /**********************************************************************************/
+
+    
+   
+    for (int r=0;r<R;r++){ //per R volte
+        squares_sum=0; 
+        //setta il contatore a zero
         for (int m=0; m <M; m++){
             counter[m]=0; 
         }
-        for(int i=0;i<n;i++){
-            if (i%1000==0){
-            }
-            index=int(rnd.Rannyu()*M);
-            counter[index]++; 
+
+        for(int i=0;i<n;i++){ //per n estrazioni
+            index=int(rnd.Rannyu()*M); //controlla in quale intervallo cade il numero estratto...
+            counter[index]++; //... e incrementa il rispettivo contatore
         }
-        for(int m=0;m<M;m++){
-            squares_sum+=pow(counter[m]-n/M,2);
-            
-            
+        
+        for(int m=0;m<M;m++){ //iterando su tutti gli intervalli
+            squares_sum+=pow(counter[m]-n/M,2); //somma il quadrato dello scarto dal valore atteso
         }
-        save_results << squares_sum/(n/M) << endl; 
+        save_results << squares_sum/(n/M) << endl; //salva il valore di chi quadro per il test r-esimo
 
         
     }
     
+    save_results.close(); 
 
     return 0; 
 }

@@ -1,6 +1,0 @@
-Suddivido M step in N blocchi. In ogni blocco calcolo il valor medio su M/N misure: A_i e il suo quadrato A_i^2: ne ho ne
-calcolo <A^2>=1/N sum(A_i^2), e <A>. Se i blocchi sono sufficientemente lunghi, gli A_i sono indipendenti
-
-
-
-Se M=10^4, N=10^2

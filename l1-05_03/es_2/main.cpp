@@ -1,7 +1,7 @@
 #include <iostream> 
 #include <fstream>
 #include <cmath>
-#include "rand_gen/random.h"
+#include "../rand_gen/random.h"
 
 using namespace std;
 
@@ -15,13 +15,13 @@ int main (int argc, char *argv[]){
     Random rnd;
     int seed[4];
     int p1, p2;
-    ifstream Primes("rand_gen/Primes");
+    ifstream Primes("../rand_gen/Primes");
     if (Primes.is_open()){
         Primes >> p1 >> p2 ;
     } else cerr << "PROBLEM: Unable to open Primes" << endl;
     Primes.close();
 
-    ifstream input("rand_gen/seed.in");
+    ifstream input("../rand_gen/seed.in");
     string property;
     if (input.is_open()){
         while ( !input.eof() ){
@@ -37,44 +37,73 @@ int main (int argc, char *argv[]){
     /**********************************************************************************/
 
 
-    int M=100; //sotto-intervalli
-    int n=10000; //quantità di numeri random estratta per test
-    int R=100;  //numero test 
 
-    double squares_sum=0; 
-    int index=0;
-    int counter[M]; //contatore per i sottointervalli
+    //Parametri 
+    int n=10000; //numero test
+    int N[4]={1,2,10,100};  //grandezza campione
 
-    //setta il contatore a 0
+    /**********************************************************************************/
+
+
    
+    //gestione output
 
-    ofstream save_results; 
-    save_results.open("results.csv");
-    save_results << "chi_squared"    << endl;
-   
+    ofstream save_results1,save_results2,save_results3;
 
-    if (!save_results.is_open()){
+    save_results1.open("res_uni_dist.csv");
+    save_results2.open("res_exp_dist.csv");
+    save_results3.open("res_lor_dist.csv");
+
+    if (!save_results1.is_open() || !save_results2.is_open() || !save_results3.is_open()){
+        cout << "Problemi con l'apertura dei file per scrittura risultati." <<endl; 
         return 0; 
     }
 
-    for (int r=0;r<R;r++){
-        squares_sum=0;
-        for (int m=0; m <M; m++){
-            counter[m]=0; 
-        }
-        for(int i=0;i<n;i++){
-            if (i%1000==0){
-            }
-            index=int(rnd.Rannyu()*M);
-            counter[index]++; 
-        }
-        for(int m=0;m<M;m++){
-            squares_sum+=pow(counter[m]-n/M,2);
-            
-            
-        }
-        save_results << squares_sum/(n/M) << endl; 
 
+    save_results1 << "N=1,N=2,N=10,N=100"    << endl;
+    save_results2 << "N=1,N=2,N=10,N=100"    << endl;
+    save_results3 << "N=1,N=2,N=10,N=100"    << endl;
+
+
+   
+
+    /**********************************************************************************/
+
+
+
+    //variabili di servizio 
+
+    double sum_uni,sum_exp,sum_lor;
+
+
+    /**********************************************************************************/
+
+    
+
+    for (int i=0;i<n;i++){//per n volte 
+        sum_uni=sum_exp=sum_lor=0;
+        int m=1; 
+        for (m=1; m <= N[3]; m++){//estrae 100 elementi
+
+            //estrae un numero dalla distribuzione * e lo aggiunge alla somma
+            sum_uni+=rnd.Rannyu(); //*:uniforme
+            sum_exp+=rnd.Exponential(1);//*:esponenziale
+            sum_lor+=rnd.Lorentian(1,0);//*:lorentziana
+
+
+            if(m==N[0] || m==N[1] || m==N[2] ){ //se m= 1,2,10 : media di 1,2,10 elementi
+                save_results1 << sum_uni/m << "," ; //salva la media per la distribuzione uniforme
+                save_results2 << sum_exp/m << "," ; //salva la media per la distribuzione esponenziale
+                save_results3 << sum_lor/m << "," ; //salva la media per la distribuzione lorentziana
+
+
+            }
+            
+        }
+        //m=100 : media di 100 elementi
+        save_results1 << sum_uni/m << endl; //salva la media per la distribuzione uniforme
+        save_results2 << sum_exp/m << endl; //salva la media per la distribuzione esponenziale
+        save_results3 << sum_lor/m << endl ; //salva la media per la distribuzione lorentziana
         
     }
     
