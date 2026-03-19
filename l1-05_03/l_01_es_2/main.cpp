@@ -81,7 +81,7 @@ int main (int argc, char *argv[]){
     
 
     for (int i=0;i<n;i++){//per n volte 
-        sum_uni=sum_exp=sum_lor=0;
+        sum_uni=sum_exp=sum_lor=0; //setta le somme a zero
         int m=1; 
         for (m=1; m <= N[3]; m++){//estrae 100 elementi
 
@@ -107,6 +107,8 @@ int main (int argc, char *argv[]){
         
     }
     
+    save_results.close(); 
+
 
     return 0; 
 }

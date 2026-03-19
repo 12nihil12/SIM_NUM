@@ -9,8 +9,7 @@ L=M/N #grandezza blocco
 
 mean,mean_err,var,var_err=np.loadtxt("results.csv", delimiter=',', unpack='true',skiprows=1) #carica i dati, saltando la riga del titolo
 
-n=np.arange(N)
-n+=1
+n=np.arange(1,N-1)
 n*=int(L)
 
 

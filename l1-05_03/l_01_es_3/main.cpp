@@ -8,31 +8,19 @@
 using namespace std;
 
 
-bool dummylancio(Random * rnd,double d, double l){ 
-
-    double x1=rnd->Rannyu(0,d);//ascissa del primo estremo dell'ago 
-    double ang=rnd->Rannyu(0,2*M_PI); //angolo formato dal secondo estremo con l'asse delle x
-    double x2=x1+l*cos(ang); // ascissa del secondo estremo dell'ago
-    
-    return x2 < 0 || x2 >d;
-}
+/******************************************************************************************************************/
+/******************************************************************************************************************/
 
 
-double random_cos(Random * rnd){ // ritorna il coseno di un angolo con probabilità uniforme 
-    double x= rnd-> Rannyu(-1,1);
-    double y= rnd-> Rannyu(-1,1);
-    if (x*x+y*y>= 1){// se il punto cade fuori dal cerchio, lo rigetta, ed avvia un nuovo calcolo
-        return random_cos(rnd); 
-    }
-    return x/sqrt(x*x+y*y); //ritorna il coseno dell'angolo individuato dalla semiretta che congiunge il punto all'origine
-}
+double random_cos(Random * rnd); // ritorna il coseno di un angolo con probabilità uniforme
+bool lancio(Random * rnd,double d, double l); //simulazione di un lancio del bastoncino: ritorna True se attravera una linea, False altrimenti
 
-bool lancio(Random * rnd,double d, double l){ 
 
-    double x1=rnd->Rannyu(0,d);//ascissa del primo estremo dell'ago 
-    double x2=x1+l*random_cos(rnd); // ascissa del secondo estremo dell'ago (l per il coseno di un angolo estratto da una distribuzione di probabilità uniforme)
-    return x2 < 0 || x2 >d; //ritorna True se x2 cade fuori dall'intervallo [0,d] (attraversa la linea)
-}
+
+/******************************************************************************************************************/
+/******************************************************************************************************************/
+
+
 
  
 int main (int argc, char *argv[]){
@@ -123,5 +111,32 @@ int main (int argc, char *argv[]){
     }
 
 
+    save_results.close(); 
+
+
     return 0; 
 }
+
+
+/******************************************************************************************************************/
+/******************************************************************************************************************/
+
+
+
+double random_cos(Random * rnd){ // ritorna il coseno di un angolo con probabilità uniforme 
+    double x= rnd-> Rannyu(-1,1);
+    double y= rnd-> Rannyu(-1,1);
+    if (x*x+y*y>= 1){// se il punto cade fuori dal cerchio, lo rigetta, ed avvia un nuovo calcolo
+        return random_cos(rnd); 
+    }
+    return x/sqrt(x*x+y*y); //ritorna il coseno dell'angolo individuato dalla semiretta che congiunge il punto all'origine
+}
+
+bool lancio(Random * rnd,double d, double l){ 
+
+    double x1=rnd->Rannyu(0,d);//ascissa del primo estremo dell'ago 
+    double x2=x1+l*random_cos(rnd); // ascissa del secondo estremo dell'ago (l per il coseno di un angolo estratto da una distribuzione di probabilità uniforme)
+    return x2 < 0 || x2 >d; //ritorna True se x2 cade fuori dall'intervallo [0,d] (attraversa la linea)
+}
+
+ 
