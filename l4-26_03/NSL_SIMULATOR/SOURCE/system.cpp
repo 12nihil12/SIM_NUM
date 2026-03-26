@@ -416,6 +416,8 @@ void System :: initialize_properties(){ // Initialize data members used for meas
   _global_av2.zeros();
   _nattempts = 0;
   _naccepted = 0;
+  //for POFV
+
   return;
 }
 
@@ -558,6 +560,20 @@ void System :: measure(){ // Measure properties
   }
   // POFV ... TO BE FIXED IN EXERCISE 4
 
+  double square_module_velocity;
+  int bin_index;
+  
+  if(_measure_pofv){
+    for(int i=0; i<_npart;i++){
+      square_module_velocity=sqrt(dot( _particle(i).getvelocity() , _particle(i).getvelocity() ));
+      bin_index=floor(square_module_velocity/_bin_size_v);
+      
+      if(bin_index < _n_bins_v){
+        _measurement(_index_pofv+bin_index)+=1;
+      }
+      
+    }
+  }
   
   
   // POTENTIAL ENERGY //////////////////////////////////////////////////////////
@@ -591,7 +607,7 @@ void System :: measure(){ // Measure properties
   if (_measure_pressure) _measurement[_index_pressure] = _rho * (2.0/3.0) * kenergy_temp + (_ptail*_npart + 48.0*virial/3.0)/_volume;
   // MAGNETIZATION /////////////////////////////////////////////////////////////
 // TO BE FIXED IN EXERCISE 6
-  // SPECIFIC HEAT /////////////////////////////////////////////////////////////
+  // SPECIFIC HEAT /////////////////////////_index_pofv////////////////////////////////////
 // TO BE FIXED IN EXERCISE 6
   // SUSCEPTIBILITY ////////////////////////////////////////////////////////////
 // TO BE FIXED IN EXERCISE 6
@@ -613,6 +629,7 @@ void System :: averages(int blk){
   // POTENTIAL ENERGY //////////////////////////////////////////////////////////
   if (_measure_penergy){
     coutf.open(string(OUTPUT_DIR) + "potential_energy.dat",ios::app);
+
     average  = _average(_index_penergy);
     sum_average = _global_av(_index_penergy);
     sum_ave2 = _global_av2(_index_penergy);
@@ -674,6 +691,20 @@ void System :: averages(int blk){
   // TO BE FIXED IN EXERCISE 7
   // POFV //////////////////////////////////////////////////////////////////////
   // TO BE FIXED IN EXERCISE 4
+    if (_measure_pofv){
+    coutf.open(string(OUTPUT_DIR) + "pofv.dat",ios::app);
+    for(int n=_index_pofv; n< _index_pofv +_n_bins_v;n++){
+      average  = _average(n);
+      sum_average = _global_av(n);
+      sum_ave2 = _global_av2(n);
+      coutf << setw(12) << blk
+          << setw(12) << (n-_index_pofv)*_bin_size_v
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    }
+   
+    coutf.close();
+  }
   // MAGNETIZATION /////////////////////////////////////////////////////////////
   // TO BE FIXED IN EXERCISE 6
   // SPECIFIC HEAT /////////////////////////////////////////////////////////////

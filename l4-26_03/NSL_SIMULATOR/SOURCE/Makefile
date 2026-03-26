@@ -1,7 +1,7 @@
-CC = g++
-CFLAGS = -O3 --std=c++14
-AFLAGS = -larmadillo
 RPATH= ../../rand_gen/
+CC = g++
+CFLAGS = -O3 --std=c++14 -I$(RPATH)
+AFLAGS = -larmadillo
 all: simulator.exe
 simulator.exe : system.o NSL_SIMULATOR.o particle.o $(RPATH)random.o
 	$(CC) system.o particle.o $(RPATH)random.o NSL_SIMULATOR.o -o simulator.exe $(AFLAGS)

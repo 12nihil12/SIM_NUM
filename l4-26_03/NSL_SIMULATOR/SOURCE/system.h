@@ -26,8 +26,8 @@ _/    _/  _/_/_/  _/_/_/_/ email: Davide.Galli@unimi.it
 using namespace std;
 using namespace arma;
 
-constexpr const char* INPUT_DIR = "INPUT/";
-constexpr const char* OUTPUT_DIR = "OUTPUT/";
+constexpr const char* INPUT_DIR = "../NSL_SIMULATOR/INPUT/";
+constexpr const char* OUTPUT_DIR = "../NSL_SIMULATOR/OUTPUT/";
 
 
 
