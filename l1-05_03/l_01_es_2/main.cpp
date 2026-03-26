@@ -1,10 +1,11 @@
 #include <iostream> 
 #include <fstream>
 #include <cmath>
-#include "../rand_gen/random.h"
+#include "random.h"
 
 using namespace std;
 
+constexpr const char * RAND_GEN_PATH= "../rand_gen/";
 
 
 
@@ -15,13 +16,13 @@ int main (int argc, char *argv[]){
     Random rnd;
     int seed[4];
     int p1, p2;
-    ifstream Primes("../rand_gen/Primes");
+    ifstream Primes(string(RAND_GEN_PATH) +"Primes");
     if (Primes.is_open()){
         Primes >> p1 >> p2 ;
     } else cerr << "PROBLEM: Unable to open Primes" << endl;
     Primes.close();
 
-    ifstream input("../rand_gen/seed.in");
+    ifstream input(string(RAND_GEN_PATH) +"seed.in");
     string property;
     if (input.is_open()){
         while ( !input.eof() ){
@@ -107,7 +108,10 @@ int main (int argc, char *argv[]){
         
     }
     
-    save_results.close(); 
+    save_results1.close(); 
+    save_results2.close(); 
+    save_results3.close(); 
+
 
 
     return 0; 

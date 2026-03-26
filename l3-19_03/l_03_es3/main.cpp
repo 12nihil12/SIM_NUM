@@ -1,10 +1,12 @@
 #include <iostream> 
 #include <fstream>
 #include <cmath>
-#include "../rand_gen/random.h"
+#include "random.h"
 
 using namespace std; 
 
+
+constexpr const char * RAND_GEN_PATH= "../rand_gen/";
 
 
 
@@ -12,10 +14,6 @@ using namespace std;
 /******************************************************************************************************************/
 
 double geometric_factor(double t,double v, double mu, double sigma, Random * rnd); //ritorna il fattore moltiplicativo F(t_i-t_(i-1)), per cui S(t_i)=F*S(t_(i-1))
-
-
-double get_S_T(double S_0,double T,double mu,double sigma, Random *rnd); //Trova direttamente S(T)=F(T,0) S(0)
-
 
 
 double get_S_T(double S_0,double T,int R,double mu,double sigma, Random *rnd); //Trova S(T) discretizzando in R sottointervalli
@@ -46,14 +44,14 @@ int main(){
 
     int seed[4];
     int p1, p2;
-    ifstream Primes("../rand_gen/Primes");
+    ifstream Primes(string(RAND_GEN_PATH) + "Primes");
     if (Primes.is_open()){
         Primes >> p1 >> p2 ;
 
     } else cerr << "PROBLEM: Unable to open Primes" << endl;
     Primes.close();
 
-    ifstream input("../rand_gen/seed.in");
+    ifstream input(string(RAND_GEN_PATH) + "seed.in");
     string property;
     if (input.is_open()){
         while ( !input.eof() ){
@@ -137,7 +135,7 @@ int main(){
         block_sum_call_dir=block_sum_put_dir=block_sum_call_dis=block_sum_put_dis=0; //riporta a zero la somma del blocco
         for(int l=0; l < L; l++){ //itera sui lanci per blocco
             
-            S=get_S_T(S_0,T,r,sigma,&rnd); // metodo diretto
+            S= S_0*geometric_factor(T,0,r,sigma,&rnd); // metodo diretto S(T)=S(0)F(T,0)
             
             block_sum_call_dir+=get_price(call,S,r,K,T);
             block_sum_put_dir+=get_price(put,S,r,K,T);
@@ -211,17 +209,12 @@ double geometric_factor(double t,double v, double mu, double sigma, Random * rnd
 
 
 
-double get_S_T(double S_0,double T,double mu,double sigma, Random *rnd){ //Trova direttamente S(T)=F(T,0) S(0)
-        return S_0*increment(T,0,mu,sigma,rnd);
-}
-
-
 double get_S_T(double S_0,double T,int R,double mu,double sigma, Random *rnd){ //Trova S(T) discretizzando in R sottointervalli
         double S=S_0; 
         double Dt=T/R;
         double t=0;
         for (int i=0; i < R ; i++){
-            S*=increment(t+Dt,t,mu,sigma,rnd);
+            S*=geometric_factor(t+Dt,t,mu,sigma,rnd);
             t+=Dt; 
         }
         return S; 
