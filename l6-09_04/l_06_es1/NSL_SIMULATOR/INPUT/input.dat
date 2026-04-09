@@ -1,7 +1,7 @@
-SIMULATION_TYPE        2
+SIMULATION_TYPE        2 0 1
 RESTART                0
 TEMP                   2.0
-NPART                  108
+NPART                  50
 RHO                    0.8
 R_CUT                  2.5
 DELTA                  0.002
