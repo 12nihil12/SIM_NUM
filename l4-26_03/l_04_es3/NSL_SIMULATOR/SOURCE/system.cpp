@@ -542,7 +542,7 @@ void System :: read_configuration(){
   cinf.close();
   if(_restart and _sim_type > 1){
     int spin;
-    cinf.open(string(INPUT_DIR) + "CONFIG/config.spin");
+    cinf.open(string(OUTPUT_DIR) + "CONFIG/config.spin");
     for(int i=0; i<_npart; i++){
       cinf >> spin;
       _particle(i).setspin(spin);

@@ -1,0 +1,279 @@
+void System :: measure(){ // Measure properties
+  _measurement.zeros();
+  // POTENTIAL ENERGY, VIRIAL, GOFR ///////////////////////////////////////////
+  int bin;
+  vec distance;
+  distance.resize(_ndim);
+  double penergy_temp=0.0, dr; // temporary accumulator for potential energy
+  double kenergy_temp=0.0; // temporary accumulator for kinetic energy
+  double tenergy_temp=0.0;
+  double magnetization=0.0;
+  double virial=0.0;
+  if (_measure_penergy or _measure_pressure or _measure_gofr) {
+    for (int i=0; i<_npart-1; i++){
+      for (int j=i+1; j<_npart; j++){
+        distance(0) = this->pbc( _particle(i).getposition(0,true) - _particle(j).getposition(0,true), 0);
+        distance(1) = this->pbc( _particle(i).getposition(1,true) - _particle(j).getposition(1,true), 1);
+        distance(2) = this->pbc( _particle(i).getposition(2,true) - _particle(j).getposition(2,true), 2);
+        dr = sqrt( dot(distance,distance) );
+        // GOFR ... TO BE FIXED IN EXERCISE 7
+        if(dr < _r_cut){
+          if(_measure_penergy)  penergy_temp += 1.0/pow(dr,12) - 1.0/pow(dr,6); // POTENTIAL ENERGY
+          if(_measure_pressure) virial       += 1.0/pow(dr,12) - 0.5/pow(dr,6); // PRESSURE
+        }
+      }
+    }
+  }
+  // POFV ... TO BE FIXED IN EXERCISE 4
+
+  double module_velocity;
+  int bin_index;
+  
+  if(_measure_pofv){
+    for(int i=0; i<_npart;i++){
+     
+      module_velocity=sqrt(dot( _particle(i).getvelocity() , _particle(i).getvelocity() ));
+      if(std::isnan(module_velocity ) || std::isinf(module_velocity )){
+        cout <<"Warning:ignoring particles with not valid velocity"<<endl;
+        continue;
+      }
+      bin_index=static_cast<int>(floor(module_velocity/_bin_size_v));
+      
+      if(bin_index >=0 && bin_index < _n_bins_v){
+        _measurement(_index_pofv+bin_index)+=1;
+      }
+      
+    }
+  }
+  
+  
+  // POTENTIAL ENERGY //////////////////////////////////////////////////////////
+  if (_measure_penergy){
+    penergy_temp = _vtail + 4.0 * penergy_temp / double(_npart);
+    _measurement(_index_penergy) = penergy_temp;
+  }
+  // KINETIC ENERGY ////////////////////////////////////////////////////////////
+  if (_measure_kenergy){
+    for (int i=0; i<_npart; i++) kenergy_temp += 0.5 * dot( _particle(i).getvelocity() , _particle(i).getvelocity() ); 
+    kenergy_temp /= double(_npart);
+    _measurement(_index_kenergy) = kenergy_temp;
+  }
+  // TOTAL ENERGY (kinetic+potential) //////////////////////////////////////////
+  if (_measure_tenergy){
+    if (_sim_type < 2) _measurement(_index_tenergy) = kenergy_temp + penergy_temp;
+    else { 
+      double s_i, s_j;
+      for (int i=0; i<_npart; i++){
+        s_i = double(_particle(i).getspin());
+        s_j = double(_particle(this->pbc(i+1)).getspin());
+        tenergy_temp += - _J * s_i * s_j - 0.5 * _H * (s_i + s_j);
+      }
+      tenergy_temp /= double(_npart);
+      _measurement(_index_tenergy) = tenergy_temp;
+    }
+  }
+  // TEMPERATURE ///////////////////////////////////////////////////////////////
+  if (_measure_temp and _measure_kenergy) _measurement(_index_temp) = (2.0/3.0) * kenergy_temp;
+  // PRESSURE //////////////////////////////////////////////////////////////////
+  if (_measure_pressure) _measurement[_index_pressure] = _rho * (2.0/3.0) * kenergy_temp + (_ptail*_npart + 48.0*virial/3.0)/_volume;
+  // MAGNETIZATION /////////////////////////////////////////////////////////////
+  
+
+  if (_measure_magnet || _measure_chi){
+    for(int i=0; i<_npart; i++){
+        magnetization+=double(_particle(i).getspin()); 
+    }
+  }
+    if (_measure_magnet){
+    _measurement[_index_magnet]=magnetization; 
+  }
+  // SUSCEPTIBILITY ////////////////////////////////////////////////////////////
+
+  if (_measure_chi){
+    _measurement[_index_chi]=magnetization*magnetization; //moltiplicazione per b verrà fatta al termine del blocco
+  }
+  // SPECIFIC HEAT /////////////////////////////////////////////////////////////
+  if(_measure_cv){
+    _measurement[_index_cv]=tenergy_temp*tenergy_temp; //la sottrazione del valore medio quadro dell'energia, come la moltiplicazione per beta verranno fatte al termine del blocco
+  }
+  
+
+  _block_av += _measurement; //Update block accumulators
+
+  return;
+}
+
+void System :: averages(int blk){
+
+  ofstream coutf;
+  double average, sum_average, sum_ave2;
+  //salva le medie per cv, prima che vengano sovrascritte con altro
+  double _global_av_cv=_global_av(_index_cv); 
+  double _global_av2_cv=_global_av2(_index_cv); 
+
+
+
+  _average     = _block_av / double(_nsteps);
+  _global_av  += _average;
+  _global_av2 += _average % _average; // % -> element-wise multiplication
+
+  // POTENTIAL ENERGY //////////////////////////////////////////////////////////
+  if (_measure_penergy){
+    coutf.open(string(OUTPUT_DIR) + "potential_energy.dat",ios::app);
+
+    average  = _average(_index_penergy);
+    sum_average = _global_av(_index_penergy);
+    sum_ave2 = _global_av2(_index_penergy);
+    coutf << setw(12) << blk 
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();
+  }
+  // KINETIC ENERGY ////////////////////////////////////////////////////////////
+  if (_measure_kenergy){
+    coutf.open(string(OUTPUT_DIR) + "kinetic_energy.dat",ios::app);
+    average  = _average(_index_kenergy);
+    sum_average = _global_av(_index_kenergy);
+    sum_ave2 = _global_av2(_index_kenergy);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();
+  }
+  // TOTAL ENERGY //////////////////////////////////////////////////////////////
+  if (_measure_tenergy){
+    coutf.open(string(OUTPUT_DIR) + "total_energy.dat",ios::app);
+    average  = _average(_index_tenergy);
+    sum_average = _global_av(_index_tenergy);
+    sum_ave2 = _global_av2(_index_tenergy);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();
+  }
+  // TEMPERATURE ///////////////////////////////////////////////////////////////
+  if (_measure_temp){
+    coutf.open(string(OUTPUT_DIR) + "temperature.dat",ios::app);
+    average  = _average(_index_temp);
+    sum_average = _global_av(_index_temp);
+    sum_ave2 = _global_av2(_index_temp);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();
+  }
+  // PRESSURE //////////////////////////////////////////////////////////////////
+  if (_measure_pressure){
+    coutf.open(string(OUTPUT_DIR) + "pressure.dat",ios::app);
+    average  = _average(_index_pressure);
+    sum_average = _global_av(_index_pressure);
+    sum_ave2 = _global_av2(_index_pressure);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();
+  }
+  // GOFR //////////////////////////////////////////////////////////////////////
+  // TO BE FIXED IN EXERCISE 7
+  // POFV //////////////////////////////////////////////////////////////////////
+  // TO BE FIXED IN EXERCISE 4
+    if (_measure_pofv){
+    coutf.open(string(OUTPUT_DIR) + "pofv.dat",ios::app);
+    for(int n=_index_pofv; n< _index_pofv +_n_bins_v;n++){
+      average  = _average(n);
+      sum_average = _global_av(n);
+      sum_ave2 = _global_av2(n);
+      coutf << setw(12) << blk
+          << setw(12) << (n-_index_pofv)*_bin_size_v
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    }
+   
+    coutf.close();
+  }
+  // MAGNETIZATION /////////////////////////////////////////////////////////////
+  if (_measure_magnet){
+    coutf.open(string(OUTPUT_DIR) + "magnetization.dat",ios::app);
+    average  = _average(_index_magnet);
+    sum_average = _global_av(_index_magnet);
+    sum_ave2 = _global_av2(_index_magnet);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();    
+
+  }
+  // SPECIFIC HEAT /////////////////////////////////////////////////////////////
+  
+    if (_measure_cv){
+    coutf.open(string(OUTPUT_DIR) + "specific_heat.dat",ios::app);
+    average  = (_average(_index_cv)-pow(_average(_index_tenergy),2))/(pow(_average(_index_temp),2));
+    _global_av(_index_cv)=sum_average = _global_av_cv + average;
+    _global_av2(_index_cv)=sum_ave2 = _global_av2_cv + average*average;
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf., blk) << endl;
+    }
+   
+    coutf.close();
+  }
+  // MAGNETIZATION /////////////////////////////////////////////////////////////
+  if (_measure_magnet){
+    coutf.open(string(OUTPUT_DIR) + "magnetization.dat",ios::app);
+    average  = _average(_index_magnet);
+    sum_average = _global_av(_index_magnet);
+    sum_ave2 = _global_av2(_index_magnet);
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();    
+
+  }
+  // SPECIFIC HEAT /////////////////////////////////////////////////////////////
+  
+    if (_measure_cv){
+    coutf.open(string(OUTPUT_DIR) + "specific_heat.dat",ios::app);
+    average  = (_average(_index_cv)-pow(_average(_index_tenergy),2))/(pow(_average(_index_temp),2));
+    _global_av(_index_cv)=sum_average = _global_av_cv + average;
+    _global_av2(_index_cv)=sum_ave2 = _global_av2_cv + average*average;
+    coutf << setw(12) << blk
+          << setw(12) << average
+          << setw(12) << sum_average/double(blk)
+          << setw(12) << this->error(sum_average, sum_ave2, blk) << endl;
+    coutf.close();    
+
+  }
+  // SUSCEPTIBILITY ////////////////////////////////////////////////////////////
+ 
+  // ACCEPTANCE ////////////////////////////////////////////////////////////////
+  double fraction;
+  coutf.open(string(OUTPUT_DIR) + "acceptance.dat",ios::app);
+  if(_nattempts > 0) fraction = double(_naccepted)/double(_nattempts);
+  else fraction = 0.0; 
+  coutf << setw(12) << blk << setw(12) << fraction << endl;
+  coutf.close();
+  
+  return;
+}
+
+double System :: error(double acc, double acc2, int blk){
+  if(blk <= 1) return 0.0;
+  else return sqrt( fabs(acc2/double(blk) - pow( acc/double(blk) ,2) )/double(blk) );
+}
+
+int System :: get_nbl(){
+  return _nblocks;
+}
+
+int System :: get_nsteps(){
+  return _nsteps;
+}
