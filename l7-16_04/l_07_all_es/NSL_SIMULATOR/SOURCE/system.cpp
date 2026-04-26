@@ -787,12 +787,12 @@ void System :: averages(int blk){
   }
   // GOFR //////////////////////////////////////////////////////////////////////
     double norm; 
-    double cost=_rho*_npart*4*M_PI/3*_bin_size;//indipendente da r
+    double cost=_rho*_npart*4*M_PI/3*pow(_bin_size,3);//indipendente dal bin 
   
     if (_measure_gofr && blk==_nblocks){
     coutf.open(string(OUTPUT_DIR) + "gofr.dat",ios::app);
     for(int n=0; n<_n_bins;n++){
-      norm=cost*(pow(double(n+1),3)-pow(double(n),3));
+      norm=cost*(pow(double(n+1),3)-pow(double(n),3));//è come dire rho*n_part*4/3*pi*((r+dr)^3-r^3)
       average  = _average(n+_index_gofr);
       sum_average = _global_av(n+_index_gofr);
       sum_ave2 = _global_av2(n+_index_gofr);

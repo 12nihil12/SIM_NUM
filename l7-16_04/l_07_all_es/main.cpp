@@ -19,7 +19,7 @@ int main (int argc, char *argv[]){
   SYS.block_reset(0);
 
 
-  for(int j=0; j < 11000; j++){ //equilibrazione
+  for(int j=0; j < 5000; j++){ //equilibrazione
       SYS.step();
     
 

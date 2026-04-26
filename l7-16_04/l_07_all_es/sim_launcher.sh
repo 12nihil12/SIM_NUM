@@ -15,7 +15,7 @@ case "$1" in
     1)
         tipo="MC"
         delta="0.1"
-        temp="1.11"
+        temp="1.1"
         ;;
     *)
         tipo="error"
