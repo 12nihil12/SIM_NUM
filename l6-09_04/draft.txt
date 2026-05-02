@@ -54,3 +54,196 @@ for i,ax in enumerate(axs.flatten()):
     if i==0: 
         ax.legend()
 
+
+
+
+
+
+
+#carica i dati della simulazione con Metropolis, h=0
+metro_tot_en=np.zeros(len(T_values))
+metro_tot_en_err=np.zeros(len(T_values))
+metro_cv=np.zeros(len(T_values))
+metro_cv_err=np.zeros(len(T_values))
+metro_chi=np.zeros(len(T_values))
+metro_chi_err=np.zeros(len(T_values))
+
+
+
+
+
+parent_folder="l_06_es1/OUTPUT_METRO_h_0/"
+
+for i,temp in enumerate(T_values): 
+    folder_name=parent_folder+f"T_{temp:.1f}/"
+    #carica l'energia totale
+    temp_val,temp_err= np.loadtxt(folder_name+"total_energy.dat",usecols=(2,3),unpack=True)
+    metro_tot_en[i]=temp_val[-1]
+    metro_tot_en_err[i]=temp_err[-1]
+    #carica il calore specifico
+    temp_val,temp_err= np.loadtxt(folder_name+"specific_heat.dat",usecols=(2,3),unpack=True)
+    metro_cv[i]=temp_val[-1]
+    metro_cv_err[i]=temp_err[-1]
+    #carica la suscettibilità
+    temp_val,temp_err= np.loadtxt(folder_name+"susceptibility.dat",usecols=(2,3),unpack=True)
+    metro_chi[i]=temp_val[-1]
+    metro_chi_err[i]=temp_err[-1]
+
+
+
+
+
+#carica i dati della simulazione con Gibbs, h=0
+gibbs_tot_en=np.zeros(len(T_values))
+gibbs_tot_en_err=np.zeros(len(T_values))
+gibbs_cv=np.zeros(len(T_values))
+gibbs_cv_err=np.zeros(len(T_values))
+gibbs_chi=np.zeros(len(T_values))
+gibbs_chi_err=np.zeros(len(T_values))
+
+
+
+parent_folder="l_06_es1/OUTPUT_GIBBS_h_0/"
+
+for i,temp in enumerate(T_values): 
+    folder_name=parent_folder+f"T_{temp:.1f}/"
+    #carica l'energia totale
+    temp_val,temp_err= np.loadtxt(folder_name+"total_energy.dat",usecols=(2,3),unpack=True)
+    gibbs_tot_en[i]=temp_val[-1]
+    gibbs_tot_en_err[i]=temp_err[-1]
+    #carica il calore specifico
+    temp_val,temp_err= np.loadtxt(folder_name+"specific_heat.dat",usecols=(2,3),unpack=True)
+    gibbs_cv[i]=temp_val[-1]
+    gibbs_cv_err[i]=temp_err[-1]
+    #carica la suscettibilità
+    temp_val,temp_err= np.loadtxt(folder_name+"susceptibility.dat",usecols=(2,3),unpack=True)
+    gibbs_chi[i]=temp_val[-1]
+    gibbs_chi_err[i]=temp_err[-1]
+
+ 
+fig,axs=plt.subplots(1,2,figsize=[15,6])
+
+axs[0].errorbar(T_values,metro_tot_en,yerr=metro_tot_en_err,label="Sim: Metropolis",fmt="o",color="blue")
+axs[0].errorbar(T_values,gibbs_tot_en,yerr=gibbs_tot_en_err,label="sim: Gibbs",fmt="o",color="teal")
+axs[0].plot(T,te(T),label="Teorico",color="dodgerblue")
+axs[0].grid(True)
+axs[0].legend()
+axs[0].set_xlabel(r"$T$")
+axs[0].set_ylabel(r"$<U/N>$")
+axs[0].set_title("Energia totale per particella")
+
+
+metro_r=(metro_tot_en-te(T_values)) #residuo
+gibbs_r=(gibbs_tot_en-te(T_values)) #residuo
+
+axs[1].errorbar(T_values,metro_r,metro_tot_en_err,fmt="-o",label="Metropolis",color="blue")
+axs[1].errorbar(T_values,gibbs_r,gibbs_tot_en_err,fmt="-o",label="Gibbs",color="teal")
+axs[1].grid(True)
+axs[1].legend()
+axs[1].set_xlabel(r"$T$")
+axs[1].set_ylabel(r"$<U/N>-U/N_{\mathrm{teo}}$")
+axs[1].set_title("Residui ")
+
+
+
+axs[0].errorbar(T_values,metro_cv,yerr=metro_cv_err,label="Sim: Metropolis",fmt="o",color="blue")
+axs[0].errorbar(T_values,gibbs_cv,yerr=gibbs_cv_err,label="sim: Gibbs",fmt="o",color="teal")
+axs[0].plot(T,heat(T),label="Teorico",color="dodgerblue")
+axs[0].grid(True)
+axs[0].legend()
+axs[0].set_xlabel(r"$T$")
+axs[0].set_ylabel(r"$<C>$")
+axs[0].set_title("Capacità termica")
+
+
+
+metro_r=(metro_cv-heat(T_values))#residuo
+gibbs_r=(gibbs_cv-heat(T_values)) #residuo
+
+
+
+axs[1].errorbar(T_values,metro_r,metro_cv_err,label="Metropolis",fmt="-o",color="blue")
+axs[1].errorbar(T_values,gibbs_r,gibbs_cv_err,label="Gibbs",fmt="-o",color="teal")
+axs[1].grid(True)
+axs[1].legend()
+axs[1].set_xlabel(r"$T$")
+axs[1].set_ylabel(r"$<C>-C_{\mathrm{teo}}$")
+axs[1].set_title("Residui ")
+
+
+
+fig,axs=plt.subplots(1,2,figsize=[15,6])
+
+axs[0].errorbar(T_values,metro_chi,yerr=metro_chi_err,label="Sim: Metropolis",fmt="o",color="blue")
+axs[0].errorbar(T_values,gibbs_chi,yerr=gibbs_chi_err,label="sim: Gibbs",fmt="o",color="teal")
+axs[0].plot(T,X(T),label="Teorico",color="dodgerblue")
+axs[0].grid(True)
+axs[0].legend()
+axs[0].set_xlabel(r"$T$")
+axs[0].set_ylabel(r"$<\chi>$")
+axs[0].set_title("Suscettibilità")
+
+metro_r=(metro_chi-X(T_values)) #residuo
+gibbs_r=(gibbs_chi-X(T_values)) #residuo
+
+axs[1].errorbar(T_values,metro_r,metro_chi_err,label="Metropolis",color="blue",fmt="-o")
+axs[1].errorbar(T_values,gibbs_r,gibbs_chi_err,label="Gibbs",color="teal",fmt="-o")
+axs[1].grid(True)
+axs[1].legend()
+axs[1].set_xlabel(r"$T$")
+axs[1].set_ylabel(r"$<\chi>-\chi_{\mathrm{teo}}$")
+axs[1].set_title("Residui ")
+
+
+fig,axs=plt.subplots(1,2,figsize=[15,6])
+
+axs[0].errorbar(T_values,metro_magn,yerr=metro_magn_err,label="Sim: Metropolis",fmt="o",color="blue")
+axs[0].errorbar(T_values,gibbs_magn,yerr=gibbs_magn_err,label="sim: Gibbs",fmt="o",color="teal")
+axs[0].plot(T,M(T),label="Teorico",color="dodgerblue")
+
+axs[0].grid(True)
+axs[0].legend()
+axs[0].set_xlabel(r"$T$")
+axs[0].set_ylabel(r"$<M>/N$")
+axs[0].set_title("Magnetizzazione (per particella)")
+
+metro_r=(metro_magn-M(T_values))#residuo
+gibbs_r=(gibbs_magn-M(T_values))#residuo
+
+axs[1].errorbar(T_values,metro_r,metro_magn_err,label="Metropolis",color="blue",fmt="-o")
+axs[1].errorbar(T_values,gibbs_r,gibbs_magn_err,label="Gibbs",color="teal",fmt="-o")
+axs[1].grid(True)
+axs[1].legend()
+axs[1].set_xlabel(r"$T$")
+axs[1].set_ylabel(r"$<M>/N-M_{\mathrm{teo}}/N$")
+axs[1].set_title("Residui ")
+
+
+
+#carica i dati delle simulazione con h=0.02
+metro_magn=np.zeros(len(T_values))
+metro_magn_err=np.zeros(len(T_values))
+gibbs_magn=np.zeros(len(T_values))
+gibbs_magn_err=np.zeros(len(T_values))
+
+metro_parent_folder="l_06_es1/OUTPUT_METRO_h_0.02/"
+gibbs_parent_folder="l_06_es1/OUTPUT_GIBBS_h_0.02/"
+
+
+for i,temp in enumerate(T_values): 
+    #carica la magnetizzazione (metropolis)
+    folder_name=metro_parent_folder+f"T_{temp:.1f}/"
+    temp_val,temp_err= np.loadtxt(folder_name+"magnetization.dat",usecols=(2,3),unpack=True)
+    metro_magn[i]=temp_val[-1]
+    metro_magn_err[i]=temp_err[-1]
+
+    #carica la magnetizzazione (gibbs)
+    folder_name=gibbs_parent_folder+f"T_{temp:.1f}/"
+    temp_val,temp_err= np.loadtxt(folder_name+"magnetization.dat",usecols=(2,3),unpack=True)
+    gibbs_magn[i]=temp_val[-1]
+    gibbs_magn_err[i]=temp_err[-1]
+
+
+
+
+titles=["Energia totale per particella (h=0)","Capacità termica (h=0)","Suscettibilità (h=0)", "Magnetizzazione per particella (h=0.02)"] # per queste proprietà

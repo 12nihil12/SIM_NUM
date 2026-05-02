@@ -1,0 +1,225 @@
+
+
+
+
+
+
+
+
+
+
+
+#ifndef ___System___
+#define ___System___
+#include <armadillo>
+
+#include "random.h"
+
+constexpr const char* INPUT_DIR = "../rand_gen";
+class System{
+
+
+
+    private: 
+
+
+        int _N; //dimensione (quanti valori di x)
+        double _sigma; double _mu;// parametri
+        
+        double _x_max,_x_min;
+
+         
+        arma::vec _x;  
+
+        
+        arma::vec _x_new; 
+        int _proposed; int _accepted; //variabili di servizio per metropolis 
+
+        Random _rand_gen; 
+
+
+    public: 
+
+        System(int,double,double,double,double);
+        ~System();
+
+
+        arma:: vec Get_x(){return x;}
+        arma:: vec Potential(arma::vec x); 
+        arma::vec Wave_function(arma:: vec x); //funzione d'onda (non normalizzata)
+        arma::vec Hamiltonian_on_WF(arma::vec x);
+
+
+        double Potential(double x); 
+        double Wave_function(double x); //funzione d'onda (non normalizzata)
+        double Hamiltonian_on_WF(double x); 
+
+    
+
+        void T_matrix();
+        void Metro_step(); //esplora la funzione d'onda con metropolis
+
+        
+
+
+};
+
+
+
+
+
+
+
+
+
+#endif // ___System___
+
+
+
+#include <cmath>
+#include "system.h"
+
+
+
+System::System(int N=100, double sigma = 1, double mu=0, double x_min=-1000,double x_max=1000){
+
+    _N=N; 
+
+
+    
+    _sigma = sigma; 
+    _mu=mu;
+
+    _x_min=x_min;
+    _x_max=x_max;
+
+
+    _x=arma::randn<arma::vec>(_N);
+    _x_new=arma::zeros<arma::vec>(_N);
+    
+
+    //inizializza a zero
+    _proposed=0; 
+    _accepted=0; 
+
+
+
+    //inizializza il generatore
+    int p1, p2; // Read from ../INPUT/Primes a pair of numbers to be used to initialize the RNG
+    std::ifstream Primes(std::string(INPUT_DIR) + "Primes");
+    Primes >> p1 >> p2 ;
+    Primes.close();
+    int seed[4]; // Read the seed of the RNG
+    std::ifstream Seed(std::string(INPUT_DIR) + "seed.in");
+    Seed >> seed[0] >> seed[1] >> seed[2] >> seed[3];
+    _rand_gen.SetRandom(seed,p1,p2);
+                
+
+}
+
+
+arma::vec System::Potential(arma::vec x){
+    return arma::pow(x,4) - 4/double(2) * x % x; 
+
+}
+double System::Potential(double x){
+    return pow(x,4) - 4/double(2) * x * x; 
+
+}
+
+arma::vec System::Wave_function(arma:: vec x){ //funzione d'onda, non normalizzata
+
+    double den= 1/(2*(_sigma*_sigma)); // 1/denominatore, comune ad entrambi
+
+    arma::vec shift_right=-arma::pow(x-_mu,2)*den; 
+    arma::vec shift_left=-arma::pow(x+_mu,2)*den; 
+
+    return arma::exp(shift_left) + arma::exp(shift_right);
+}
+
+double System::Wave_function(double x){ //funzione d'onda, non normalizzata
+
+    double den= 0.5*1.0/(_sigma*_sigma); // 1/denominatore, comune ad entrambi
+
+    double shift_right=-pow(x-_mu,2)*den; 
+    double shift_left=-pow(x-_mu,2)*den; 
+
+    return exp(shift_left) + exp(shift_right);
+}
+
+    
+
+
+arma::vec System::Hamiltonian_on_WF(arma::vec x){
+
+    double c=1.0/(_sigma*_sigma);
+    arma::vec arg=x*_mu*c; 
+  
+    arma::vec kinetic_part=- 0.5*c*((x%x+_mu*_mu)*c -1.0 - 2.0*arg%arma::tanh(arg));
+   
+    return kinetic_part+ Potential(x);
+}
+
+
+double System::Hamiltonian_on_WF(double x){
+
+    double c=1.0/(_sigma*_sigma);
+    double arg=x*_mu*c; 
+  
+    double kinetic_part=- 0.5*c*((x*x+_mu*_mu)*c -1.0 - 2.0*arg*tanh(arg));
+   
+    return kinetic_part+ Potential(x);
+}
+
+
+
+
+
+
+
+
+void T_matrix(){
+
+    
+}
+
+
+void System::Metro_step(){ //esplora la funzione d'onda con metropolis
+
+
+    bool is_accepted; 
+
+    //transizione
+    int i= int(_rand_gen.Rannyu(0,1)*_N);
+    double new_val=_rand_gen.Rannyu(_x_min,_x_max); 
+  
+
+
+    //accettazione
+    double p=pow(Wave_function(_x_new(i))/Wave_function(_x(i)),2);
+    
+    if (p>1){
+        is_accepted=true ; // move is accepted 
+    }else if (p>0 ) { //controllo di sicurezza
+        double num=_rand_gen.Rannyu(0,1); 
+        if (num < p){ //evento che ha probabilità p di avverarsi
+            is_accepted=true; 
+        }else{
+            is_accepted=false; 
+        }
+    }
+    _proposed++; //conta quante mosse proposte
+    if (is_accepted){
+        _x(i)=new_val;
+        _accepted++; //conta quante mosse accettate
+    }
+
+    return; 
+}
+
+
+
+
+
+
+
