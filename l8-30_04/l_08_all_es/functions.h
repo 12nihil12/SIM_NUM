@@ -2,7 +2,7 @@
 #define ___functions___
 
 #include <armadillo>
-
+#include <functional>
 
 class Random; 
 
@@ -14,26 +14,12 @@ struct Result{
 };
 
 
-struct Metro{
-   double inner;
-   double outer;
-};
+//DATA BLOCKING 
 
-
-struct NumberOf{
-    unsigned int blocks;
-    unsigned int steps;
-    unsigned int eq_steps;
-}; 
-
-
-
-
-bool Metro_accept(double p, Random * rnd); 
-
-
-Result Data_blocking(unsigned N_blocks, unsigned N_steps,arma::vec & x,bool print_results=false, const  char * filename="results.txt");
-
+Result Data_blocking(unsigned int  N_blocks, unsigned int N_steps, //numero di blocchi e di step
+   arma::vec & x, //vettore di variabili stocastiche di cui calcolare il valor medio(devono essere N_blocks*N_steps)
+   bool print_results=false, const  char * filename="results.dat"//opzionale, per stampa risultati
+); 
 
 
 #endif // ___functions___

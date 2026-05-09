@@ -5,6 +5,7 @@ CFLAGS = -Wall -O3 --std=c++17 -I $(RPATH)
 
 
 
+
 main.exe : main.o random.o system.o functions.o
 	$(CC) $(RPATH)random.o main.o system.o functions.o -o main.exe $(ARMALIBS)
 
@@ -15,7 +16,7 @@ main.o : main.cpp
 system.o: system.cpp system.h 
 	$(CC) -c system.cpp -o system.o $(CFLAGS)
 
-functions.o: functions.cpp functions.h system.h 
+functions.o: functions.cpp functions.h
 	$(CC) -c functions.cpp -o functions.o $(CFLAGS)
 
 

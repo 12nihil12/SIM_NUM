@@ -2,6 +2,7 @@
 #define ___System___
 
 #include <armadillo>
+#include <string>
 #include "functions.h"
 
 class Random;
@@ -17,66 +18,49 @@ class System{
         double _sigma; double _mu;// parametri
         double _x; //posizione
 
-        Result _exp_H; //valore atteso dell'hamiltoniana (col suo errore)
-    
-        double _x_new,_save_sigma,_save_mu; 
+        double _x_new;//ausiliare, per mossa metropolis
 
 
-
+        
 
     public: 
 
-        System(double,double,double);
-       
-        void Set_H_exp_val(Result exp_H){_exp_H=exp_H;}; 
-        Result Get_H_exp_val(){return _exp_H;}; 
+        System(double x,double sigma, double mu);
 
+
+        // x
         double Get_x(){return _x;};
         void Set_x(double x){_x = x;};
 
+
+        //Parametri: sigma, mu
         double Get_sigma(){return _sigma;};
         void Set_sigma(double sigma){_sigma = sigma;};
 
         double Get_mu(){return _mu;};
         void Set_mu(double mu){_mu = mu;};
-
-        void Save_par(){_save_sigma=_sigma; _save_mu=_mu;};
-        void Set_par(double sigma,double mu){_sigma=sigma; _mu=mu;};
-        void Set_saved_par(){_sigma=_save_sigma; _mu=_save_mu;}
+        void Set_pams(double sigma,double mu){_sigma=sigma; _mu=mu;};
+      
 
 
-
-
-        double Metro_Sample(unsigned int N, arma::vec & samples, Random *rnd, double delta,unsigned int N_E=0); //crea un vettore di N samples secondo Metropolis e restituisce l'accettanza
+        double Metro_Sample(unsigned int N, arma::vec & samples, Random *rnd,double delta,unsigned int N_E=0); //crea un vettore di N samples secondo Metropolis, lo salva in samples, e restituisce l'accettanza. 
+        // N_E è il numero di step "a vuoto" per burn in, di default zero
+        bool Metro_Move(Random * rnd,double delta); //algoritmo di Metropolis: prova una mossa, la valuta, e restituisce True se la mossa è accettata e la esegue, False altrimenti (e non fa nulla)
         
-        bool Metro_Move(Random * rnd, double delta); //algoritmo di Metropolis:restituisce True se la mossa è accettata e la esegue, False altrimenti (e non fa nulla)
-        
-        //funzioni di appoggio per Metro_move 
-        void Metro_try_move(Random * rnd, double delta); //tenta una mossa di Metropolis, con parametro delta
-        double Metro_eval_move();//restituisce la probabilità di accettare la mossa
-        void Metro_make_move();//esegue una mossa (che dev'essere stata accettata)
 
+        //applica le seguenti funzioni a x 
 
+        double Potential(double x); //Energia potenziale
+        double WF_mod_square(double x);  //modulo quadro funzione d'onda (non normalizzata)
+        double Hamiltonian_on_WF(double x); //Restituisce H psi /psi , per calcolo <H>
 
         
-        double Potential(double); 
-        double Wave_function(double); //funzione d'onda (non normalizzata)
-        double Hamiltonian_on_WF(double); 
+        //applica le seguenti funzioni a un vettore di x e salva il risultato in res 
+        void Potential(arma::vec & x,arma::vec & res);  //Energia potenziale
+        void WF_mod_square(arma::vec & x,arma::vec & res); //modulo quadro funzione d'onda (non normalizzata)
+        void Hamiltonian_on_WF(arma::vec & x,arma::vec & res); //Restituisce H psi /psi , per calcolo <H>
 
 
-        
-        arma::vec Potential(arma::vec); 
-        arma::vec Wave_function(arma::vec); //funzione d'onda (non normalizzata)
-        arma::vec Hamiltonian_on_WF(arma::vec); 
-
-
-        Result Hamiltonian_exp_val(NumberOf N, Random * rnd,double delta, arma::vec & x,double & acceptance); //calcola il valore atteso dell'hamiltoniana
-        // (con data blocking: N_steps, N_blocks), sampling con metropolis: (passo delta, step di equilibrazione N_eq_steps) [NumberOf N: N_steps,N_blocks,N_eq_steps]
-        //I N_steps*N_blocks valori sampled con metropolis vengono salvati in un vettore x passato per riferimento, per un eventuale futuro utilizzo
-        //Sempre per riferimento viene passato un double dove salvare l'accettanza di metropolis
-       
-
-        
 
 
 };

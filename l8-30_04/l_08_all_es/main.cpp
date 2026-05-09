@@ -4,17 +4,18 @@
 #include <armadillo>
 #include <iomanip>
 #include <string>
+
+
 #include "functions.h"
 #include "random.h"
 #include "system.h"
+
 using namespace std;
 using namespace arma; 
 
 constexpr const char * RAND_GEN_PATH= "../rand_gen/";
 
 
-
-Metro Metro_Evolve( unsigned int R, double beta, const char * filename,  double delta_in, double delta_out, NumberOf N, System * sys,Random *rnd); 
 
 
 int main (int argc, char *argv[]){
@@ -48,103 +49,173 @@ int main (int argc, char *argv[]){
 
     //PARAMETRI 
 
-    NumberOf N; 
 
-    N.blocks=100; //numero blocchi
-    N.steps=1000;//step per blocco 
-    N.eq_steps=100; //step di equilibrazione (per il metropolis interno)
+    //MonteCarlo
 
-
-  
-    /**********************************************************************************/
+    unsigned int N_blocks=1000; //numero blocchi
+    unsigned int N_steps=100;//step per blocco 
 
 
-    //PARAMETRI METROPOLIS
+    //Metropolis interno (per sampling funzione d'onda)
 
-    Metro acceptance; //accettanza del metropolis (esterno,media dell'accettanza del metropolis interno)
+    unsigned int N_E=100; //step di burn in(per il metropolis interno)
 
-    //beta
-   
-    double T_start=2.0;
-    double T_end=0.5;
-    double k=0.2; 
-    double alpha=0.8;
-    int B=30; //numero valori di beta
-    //auto Beta=[=] (int j)  {return 1./(T_end+(T_start-T_end)*exp(-k*j));}; 
-    auto Beta=[=] (double beta)  {return beta/alpha;}; 
+    double delta_in=2.2;
 
-    double beta=1/T_start;
+    //Metropolis esterno (per ottimizzazione parametri di sistema) 
+
+    //beta 
+
+    double T_start=2.0; //temperatura iniziale
+    double alpha=0.78; //coefficiente per progressione geometrica
+    int B=50; //numero valori di beta considerati
+    double beta=1/T_start; //beta iniziale
     
     //Step metropolis per ogni beta
-
-    int R_start=100; //numero di step metropolis per beta_start
-    auto R_ev=[=](int j){return R_start;};
-    int R;
-
+    int R=50; //numero di step metropolis per beta_start
+   
     //delta
+    double delta_out=0.1;//delta per il metropolis principale
 
-    double delta_in=0.8; //delta per il metropolis interno (sampling della funzione d'onda)
-    double delta_out_start=0.5;//delta per il metropolis principale
-    double delta_out;
-    auto Delta=[=](int j) {return delta_out_start/(pow(double(1+j),0.5));}; 
-  
     /**********************************************************************************/
 
 
-    //STAMPA RISULTATI PRINCIPALI
+    //STAMPA RISULTATI
+
+    //risultati principali (uno per beta )
+    ofstream print_main;
+    print_main.open("Results.csv");
+    print_main << left  << setw(12) <<"j" << setw(12) << "beta" << setw(12) << "delta" << setw(12) << "acc_outer" << setw(12) << "avg_acc_inn"<< setw(12)  << "last_exp_H"<< setw(12)  << "error" << setw(12) << "last_sigma" << setw(12) <<  "last_mu " << endl; 
+
+    //risultati intemedi (un file per ogni beta)
+    ofstream print_side; 
+    string filename; 
     
-    ofstream print_results;
 
-    print_results.open("Results.dat");
-
-    print_results << "j" << setw(12) << "beta" << setw(12) << "delta" << setw(12) << "acc_outer " << setw(12) << "avg_acc_inn  "<< setw(12)  << "last_exp_H \n"; 
-
+    ofstream print_best; //per i migliori parametri, stampa in dettaglio il calcolo dell'integrale e la distribuzione delle x 
     /**********************************************************************************/
 
 
     //VARIABILI DI SERVIZIO
 
+    double accept_inner,accept_outer; //accettanza del metropolis interno (di servizio a Hamiltonian_exp_val)
+    double sum_accept_inner; //accettanza media del metropolis interno
+    int accepted_outer;//numero mosse accettate metropolis esterno
+    double A; 
 
-    string filename; //per il nome dei file dei risultati intermedi (singolo beta)
-    vec x ; //vettore in cui salvare x(di servizio a Hamiltonian_exp_val )
-    double accept_in; //accettanza del metropolis interno (di servizio a Hamiltonian_exp_val)
 
+    //per variabili temporanee metropolis
+    vec x,H_on_WF,x_save; //x e f(x) per valore medio hamiltoniana
+    x_save.set_size(N_steps*N_blocks);
+    x.set_size(N_steps*N_blocks); 
+    H_on_WF.set_size(N_steps*N_blocks);
+
+    double new_sigma,new_mu,save_sigma,save_mu; //parametri
+    Result exp_H,new_exp_H; //valore medio hamiltoniana
+   
 
     /**********************************************************************************/
 
 
     //PARAMETRI SISTEMA E INIZIALIZZAZIONE
 
-    double mu_0=1.2; 
+    double mu_0=1.0; 
     double sigma_0=0.5;
     
-
     System sys(0.,sigma_0,mu_0); //Inizializza il sistema in x=0,sigma=sigma_0, mu=mu_0
-    Result exp_H=sys.Hamiltonian_exp_val(N,&rnd,delta_in,x,accept_in); //calcola il valore atteso dell'hamiltoniana coi parametri dati
-    sys.Set_H_exp_val(exp_H); //lo salva
+
+
+    sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi        
+    sys.Hamiltonian_on_WF(x,H_on_WF); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x) e la salva in H_on_Wf 
+    exp_H=Data_blocking(N_blocks,N_steps,H_on_WF); //col data blocking, calola la media di H_on_Wf (e quindi l'integrale)
 
 
     /**********************************************************************************/
     
+    
+    //variabili di servizio, per salvataggio temporaneo
+  
    
 
+
     for(int j=0; j < B; j++){
-        beta/=alpha;//modifica beta
-        R=R_ev(j);
-        delta_out=Delta(j);
-        //cout << delta_out << endl;
 
-        
+        //delta_out=delta(j);
+       
+        accepted_outer=0; 
+        sum_accept_inner=0; 
 
+
+        //if(j==10){delta_out=0.1;}
+        //if(j==20){delta_out=0.01; R=30;}
+        //else if(j==30){delta_out=0.001; R=50;}   
+        //else if(j==40){delta_out=0.0001;R=100;}   
+
+        //Per ogni beta,stampa i risultati per ogni step di evoluzione parametri con metropolis
         filename="OUTPUT/" +to_string(j) + ".csv" ; //crea il file in cui salvare i risultati
+        print_side.open(filename); 
+        if(print_side.is_open()){
+            print_side << "sigma" <<"," << "mu" <<"," << "exp_H" <<"," << "error" <<"," << "acceptance" << endl; 
 
-        //evolve il sistema con metropolis per R passi col beta e i parametri delta dati, restituisce l'accettanza e salva i risultati
-        acceptance=Metro_Evolve(R,beta,filename.c_str(),delta_in,delta_out, N, &sys,&rnd);
+        }
 
-        Result exp_H = sys.Get_H_exp_val();
+        for(int r=0; r < R; r++){
+            
+            //PROPOSTA DI MOSSA
+         
+            save_sigma=sys.Get_sigma(); save_mu=sys.Get_mu(); //salva i parametri attuali 
 
-        print_results << j << setw(12) << beta << setw(12) << delta_out << setw(12) << acceptance.outer  <<  setw(12) << acceptance.inner <<  setw(12) <<  exp_H.value <<endl ; 
+            do{ 
+                //calcola dei nuovi parametri
+                new_sigma=save_sigma +delta_out*rnd.Rannyu(-1,1);
+                new_mu=save_mu +delta_out*rnd.Rannyu(-1,1);
 
+            }while(new_sigma <0 || new_mu < 0) ;//i parametri possono essere solo positivi (simmetria):
+
+            sys.Set_pams(new_sigma,new_mu);//modifica i parametri (proposta di mossa)
+
+            //VALUTAZIONE DELL'ACCETTAZIONE 
+
+
+            accept_inner=sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi
+            sum_accept_inner+=accept_inner; //somma l'accettanza del metropolis interno per calcolarne la media 
+            
+            sys.Hamiltonian_on_WF(x,H_on_WF); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x) e la salva in H_on_Wf 
+            new_exp_H=Data_blocking(N_blocks,N_steps,H_on_WF); //col data blocking, calola la media di H_on_Wf (e quindi l'integrale)
+
+
+            A= exp(- beta* (new_exp_H.value-exp_H.value)); //calcola l'accettanza relativa alla mossa exp(-beta (E_new - E_old))
+
+
+            if(A > 1 || rnd.Rannyu() < A ){ // se A >1 accetta con certezza, se A < 1 accetta con probabilità A 
+                accepted_outer++; //aumenta il numero di mosse accettate
+                exp_H=new_exp_H; //salva il nuovo valore dell'energia
+                
+                x_save=x;//salva la configurazione di x 
+            }else{
+                sys.Set_pams(save_sigma,save_mu);//se la mossa non è stata accettata, rimette i parametri com'erano prima
+        
+            }
+
+            //salva i risultati intermedi
+            if(print_side.is_open()){
+                print_side << sys.Get_sigma() <<","<< sys.Get_mu() << ","<< exp_H.value <<","<< exp_H.error <<","<< accept_inner <<"\n"; 
+
+            }
+        
+        }
+
+    
+
+        if(print_main.is_open()){
+            print_main << left  << setw(12) << j << setw(12) << beta << setw(12) << delta_out << setw(12) << double(accepted_outer)/R <<  setw(12) << sum_accept_inner/R <<  setw(12) <<  exp_H.value << setw(12) << exp_H.error <<   setw(12) << sys.Get_sigma() <<  setw(12) << sys.Get_mu() << endl ; 
+
+        }
+
+
+        beta/=alpha; //progressione geometrica beta
+
+        print_side.close();
 
     }
 
@@ -152,6 +223,29 @@ int main (int argc, char *argv[]){
 
     /**********************************************************************************/
 
+
+
+    print_main.close();
+
+
+    //per gli ultimi valori di sigma e mu, stampa nel dettaglio
+
+            
+    
+    //calcola e stampa la distribuzione delle x secondo il modulo quadro della funzione d'onda
+
+    print_best.open("x_dist.dat"); 
+    x_save.print(print_best); 
+    print_best.close(); 
+    
+
+    
+
+    //calcola l'integrale ,stampando il dettaglio
+    sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi
+
+    sys.Hamiltonian_on_WF(x,H_on_WF); 
+    Data_blocking(N_blocks,N_steps,H_on_WF,true,"integral.dat"); 
 
 
  
@@ -160,75 +254,3 @@ int main (int argc, char *argv[]){
 }
 
 
-
-
-
-Metro Metro_Evolve( unsigned int R, double beta, const char * filename,  double delta_in, double delta_out, NumberOf N, System * sys,Random *rnd){
-
-
-
-    int accepted=0;//accettanza metropolis esterno 
-    double accept_in; //accettanza metropolis interno
-
-    double sum_accept_in=0; //di servizio, per calcolare l'accettanza media del metropolis interno
-
-    double new_sigma,new_mu; //parametri di servizio
-
-
-    ofstream print_results; //stampa i risultati 
-    print_results.open(filename); 
-    print_results << "sigma" <<"," << "mu" <<"," << "p,"<< "exp_H" <<"," << "error" <<"," << "acceptance" << endl; 
-
-   
-    vec x ; 
-    Result new_exp_H;
-
-    for(int r=0; r < R; r++){
-        //propone una mossa
-        new_sigma=rnd->Gauss(sys->Get_sigma(),delta_out); 
-        new_mu=rnd->Gauss(sys->Get_mu(),delta_out); 
-
-        if(new_sigma <0 || new_mu < 0){ //i parametri possono essere solo positivi (simmetria): se sono negativi ignora la mossa a priori
-            continue; 
-        }
-
-
-        sys->Save_par(); //salva i parametri attuali (sigma, mu), in modo da non perderli
-        sys->Set_par(new_sigma,new_mu);//modifica i parametri (proposta di mossa)
-
-        //calcola la nuova energia
-        new_exp_H=sys->Hamiltonian_exp_val(N,rnd,delta_in,x,accept_in); //salva il nuovo valore dell'energia
-
-        sum_accept_in+=accept_in; //per calcolare l'accettanza media del metropolis interno 
-
-
-        double p= exp(- beta* (new_exp_H.value-sys->Get_H_exp_val().value)); //calcola l'accettanza relativa alla mossa
-
-        if(Metro_accept(p,rnd)){ //se la mossa è stata accettata
-            accepted++; //aumenta il numero di mosse accettate
-            sys->Set_H_exp_val(new_exp_H); //salva il nuovo valore dell'energia
-            
-        }else{
-            sys->Set_saved_par();//se la mossa non è stata accettata, rimette i parametri com'erano prima
-        }
-
-
-        //salva l'accettanza media del metropolis interno
-
-
-
-        //salva i risultati
-        print_results  << sys->Get_sigma() <<","<< sys->Get_mu() <<"," << p << ","<< sys->Get_H_exp_val().value <<","<< sys->Get_H_exp_val().error <<","<< accept_in <<"\n"; 
-        
-
-
-    }
-
-
-    Metro acceptance; 
-
-    acceptance.inner=sum_accept_in/R; 
-    acceptance.outer=double(accepted)/R;
-    return acceptance; //ritorna l'accettanza del metropolis esterno 
-
-}

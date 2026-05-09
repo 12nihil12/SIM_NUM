@@ -1,26 +1,31 @@
 #include <cmath>
+
 #include "random.h"
 #include "system.h"
 
+using namespace std; 
+using namespace arma; 
 
 
-System::System(double x,double sigma = 1, double mu=0){
+
+System::System(double x,double sigma, double mu){
     
     _sigma = sigma; 
     _mu=mu;
     _x=x; 
-    
 }
 
 
-double System::Metro_Sample(unsigned int N, arma::vec & samples, Random *rnd, double delta,unsigned int N_E){ //crea un vettore di N samples secondo Metropolis e restituisce l'accettanza
 
 
-    
+
+
+
+double System::Metro_Sample(unsigned int N, vec & samples, Random *rnd,double delta,unsigned int N_E){ //crea un vettore di N samples secondo Metropolis e restituisce l'accettanza
+
     for(int i=0; i<N_E; i++){ //step di equilibrazione
         Metro_Move(rnd,delta); //esegue la mossa
     }
-
 
     samples.set_size(N);
 
@@ -29,6 +34,7 @@ double System::Metro_Sample(unsigned int N, arma::vec & samples, Random *rnd, do
 
     for(int i=0; i<N; i++){
         is_accepted=Metro_Move(rnd,delta); //esegue la mossa
+
         if(is_accepted){ accepted++; }//se è stata accettata aumenta il contatore
         samples(i)=_x; //salva la x corrente
     }
@@ -42,47 +48,22 @@ double System::Metro_Sample(unsigned int N, arma::vec & samples, Random *rnd, do
 
 
 
-bool System::Metro_Move(Random * rnd, double delta){
+bool System::Metro_Move(Random * rnd,double delta){
         
     //prova una mossa
-    Metro_try_move(rnd,delta); 
+    _x_new=_x + delta*rnd->Rannyu(-1,1); 
    
     //ne calcola l'accettazione
-    double p= Metro_eval_move(); 
+    double A= WF_mod_square(_x_new)/WF_mod_square(_x); 
 
-  
-    if (Metro_accept(p,rnd)){ //se la mossa viene accettata
-        Metro_make_move(); //la esegue  mossa
-        return true; 
+
+    if(A > 1 || rnd->Rannyu() < A ){ // se A >1 accetta con certezza, se A < 1 accetta con probabilità A 
+        _x=_x_new; //accetta la mossa 
+        return true;
     }
 
     return false; 
 
-}
-
-
-
-
-
-
-
-
-
-
-void System::Metro_try_move(Random * rnd, double delta){
-    _x_new=rnd->Gauss(_x,delta); 
-    return;
-}
-
-
-double System::Metro_eval_move(){
-    return pow(Wave_function(_x_new)/Wave_function(_x),2);
-}
-
-
-void System::Metro_make_move(){
-    _x=_x_new;
-    return;
 }
 
 
@@ -94,14 +75,14 @@ double System::Potential(double x){
 
 }
 
-double System::Wave_function(double x){ //funzione d'onda, non normalizzata
+double System::WF_mod_square(double x){ //modulo quadro funzione d'onda, non normalizzata
 
     double den= 0.5*1.0/(_sigma*_sigma); // 1/denominatore, comune ad entrambi
 
     double shift_right=-pow(x-_mu,2)*den; 
     double shift_left=-pow(x+_mu,2)*den; 
 
-    return exp(shift_left) + exp(shift_right);
+    return pow(exp(shift_left) + exp(shift_right),2);
 }
 
 double System::Hamiltonian_on_WF(double x){
@@ -116,45 +97,29 @@ double System::Hamiltonian_on_WF(double x){
 
 
 
-
-
-
-
-arma::vec System::Potential(arma::vec x){
-    return arma::pow(x,4) - 5/double(2) * arma::square(x); 
-
+void System::Potential(vec  & x,vec & res){
+    res=pow(x,4) - 5/double(2) * square(x); 
+    return; 
 }
 
-arma::vec System::Wave_function(arma::vec x){ //funzione d'onda, non normalizzata
+void System::WF_mod_square(vec  & x,vec & res){ //funzione d'onda, non normalizzata
 
     double den= 0.5*1.0/(_sigma*_sigma); // 1/denominatore, comune ad entrambi
 
-    return arma::exp(-arma::square(x-_mu)*den) + arma::exp(-arma::square(x+_mu)*den);
+    res = square(exp(-square(x-_mu)*den) + exp(-square(x+_mu)*den));
+
+    return; 
 }
 
-arma::vec System::Hamiltonian_on_WF(arma::vec x){
+void System::Hamiltonian_on_WF(vec & x,vec & res){
 
     double c=1.0/(_sigma*_sigma);
-    arma::vec arg=x*_mu*c; 
+    vec arg=x*_mu*c; 
    
-    return - 0.5*c*((arma::square(x)+_mu*_mu)*c -1.0 - 2.0*arg%arma::tanh(arg))+ Potential(x);
+
+    res= - 0.5*c*((square(x)+_mu*_mu)*c -1.0 - 2.0*arg%tanh(arg)) //parte cinetica
+    + pow(x,4) - 5/double(2) * square(x); //parte potenziale
+    return;
 }
-
-
-
-
-
-
-Result System::Hamiltonian_exp_val(NumberOf N, Random * rnd,double delta, arma::vec & x,double & acceptance){
-
-    
-    acceptance=Metro_Sample(N.steps*N.blocks,x,rnd,delta,N.eq_steps); //calcola x distribuita secondo il modulo quadro di psi
-
-    arma::vec H_on_WF=Hamiltonian_on_WF(x); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x)
-
-    return Data_blocking(N.blocks,N.steps,H_on_WF); //col data blocking, calola l'integrale   
-
-}
-
 
 
