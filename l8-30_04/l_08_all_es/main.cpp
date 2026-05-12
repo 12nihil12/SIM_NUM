@@ -52,8 +52,8 @@ int main (int argc, char *argv[]){
 
     //MonteCarlo
 
-    unsigned int N_blocks=1000; //numero blocchi
-    unsigned int N_steps=100;//step per blocco 
+    unsigned int N_blocks=100; //numero blocchi
+    unsigned int N_steps=2000;//step per blocco 
 
 
     //Metropolis interno (per sampling funzione d'onda)
@@ -72,10 +72,10 @@ int main (int argc, char *argv[]){
     double beta=1/T_start; //beta iniziale
     
     //Step metropolis per ogni beta
-    int R=50; //numero di step metropolis per beta_start
+    int R=20; //numero di step metropolis per beta_start
    
     //delta
-    double delta_out=0.1;//delta per il metropolis principale
+    double delta_out=0.5;//delta per il metropolis principale
 
     /**********************************************************************************/
 
@@ -120,14 +120,14 @@ int main (int argc, char *argv[]){
     //PARAMETRI SISTEMA E INIZIALIZZAZIONE
 
     double mu_0=1.0; 
-    double sigma_0=0.5;
+    double sigma_0=1.0;
     
     System sys(0.,sigma_0,mu_0); //Inizializza il sistema in x=0,sigma=sigma_0, mu=mu_0
 
 
-    sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi        
-    sys.Hamiltonian_on_WF(x,H_on_WF); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x) e la salva in H_on_Wf 
-    exp_H=Data_blocking(N_blocks,N_steps,H_on_WF); //col data blocking, calola la media di H_on_Wf (e quindi l'integrale)
+    //sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi        
+    //sys.Hamiltonian_on_WF(x,H_on_WF); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x) e la salva in H_on_Wf 
+    //exp_H=Data_blocking(N_blocks,N_steps,H_on_WF); //col data blocking, calola la media di H_on_Wf (e quindi l'integrale)
 
 
     /**********************************************************************************/
@@ -140,16 +140,17 @@ int main (int argc, char *argv[]){
 
     for(int j=0; j < B; j++){
 
-        //delta_out=delta(j);
-       
+    
+        //azzera i contatori
         accepted_outer=0; 
         sum_accept_inner=0; 
 
 
-        //if(j==10){delta_out=0.1;}
-        //if(j==20){delta_out=0.01; R=30;}
-        //else if(j==30){delta_out=0.001; R=50;}   
-        //else if(j==40){delta_out=0.0001;R=100;}   
+        //aggiusta i parametri
+        if(j==15){delta_out=0.1;}
+        if(j==20){alpha=0.85; R=50;}
+        else if(j==25){delta_out=0.01;} 
+        else if(j==40){alpha=0.9;} //delta_out=0.001;}   
 
         //Per ogni beta,stampa i risultati per ogni step di evoluzione parametri con metropolis
         filename="OUTPUT/" +to_string(j) + ".csv" ; //crea il file in cui salvare i risultati
@@ -161,8 +162,15 @@ int main (int argc, char *argv[]){
 
         for(int r=0; r < R; r++){
             
+            //ricalcola l'integrale coi parametri correnti(per impedire la propagazione di valori "fortunati" che si trovano a sinistra del valor medio)
+
+            sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in,N_E); //calcola un vettore di _N_blocks*_N_steps x distribuite secondo il modulo quadro di psi
+            sys.Hamiltonian_on_WF(x,H_on_WF); //per ogni x calcola l'hamiltoniana applicata a psi(x) diviso per psi(x) e la salva in H_on_Wf 
+            exp_H=Data_blocking(N_blocks,N_steps,H_on_WF); //col data blocking, calola la media di H_on_Wf (e quindi l'integrale)         
+
+        
             //PROPOSTA DI MOSSA
-         
+
             save_sigma=sys.Get_sigma(); save_mu=sys.Get_mu(); //salva i parametri attuali 
 
             do{ 
@@ -174,6 +182,8 @@ int main (int argc, char *argv[]){
 
             sys.Set_pams(new_sigma,new_mu);//modifica i parametri (proposta di mossa)
 
+            
+            
             //VALUTAZIONE DELL'ACCETTAZIONE 
 
 

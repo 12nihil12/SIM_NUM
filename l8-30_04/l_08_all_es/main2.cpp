@@ -68,7 +68,7 @@ int main (int argc, char *argv[]){
     //MonteCarlo
 
     unsigned int N_blocks=100; //numero blocchi
-    unsigned int N_steps=1000;//step per blocco 
+    unsigned int N_steps=5000;//step per blocco 
 
     double delta_in=0.9; //WARNING: CHANGING THIS WILL RESULT IN EVERYTHING BREAKING DOWN
 
@@ -88,15 +88,15 @@ int main (int argc, char *argv[]){
 
     //PARAMETRI SISTEMA E INIZIALIZZAZIONE
 
-    double mu_0=0.807171; 
-    double sigma_0=0.624149;
+    double mu_0=0.804044;
+    double sigma_0=0.627135;
     
     System sys(0.,sigma_0,mu_0); //Inizializza il sistema in x=0,sigma=sigma_0, mu=mu_0
 
+    
+
     //per gli ultimi valori di sigma e mu, stampa nel dettaglio
 
-            
-    
     //calcola e stampa la distribuzione delle x secondo il modulo quadro della funzione d'onda
     sys.Metro_Sample(N_blocks*N_steps,x,&rnd,delta_in);
     print_best.open("x_dist.dat"); 

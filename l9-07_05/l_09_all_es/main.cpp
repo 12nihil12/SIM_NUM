@@ -65,7 +65,7 @@ int main(int argc, char *argv[]){
     /**********************************************************************************/
 
    int N_cities=34; 
-   int pop_size=100; 
+   int pop_size=200; 
    int N_generations=1000; 
 
    double Pm=0.05; 
@@ -82,13 +82,13 @@ int main(int argc, char *argv[]){
 
 
     if(which=='C'){
-        globe.Fill_Circumference(2.0,&rnd);
+        globe.Fill_Circumference(1.0,&rnd);
         filename1="cities_on_circle.csv"; 
         filename2="circle_paths.csv"; 
 
 
     }else{
-        globe.Fill_Square(2.0,&rnd); 
+        globe.Fill_Square(1.0,&rnd); 
         filename1="cities_in_square.csv"; 
         filename2="square_paths.csv"; 
 
