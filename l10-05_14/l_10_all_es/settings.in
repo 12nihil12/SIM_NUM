@@ -1,0 +1,6 @@
+Population_size 3000 
+Number_of_generations 2500
+Migrations_are_allowed 1                   #Sono permesse migrazioni : 0 no, 1 sì
+Generations_to_migration 200               #Quante generazioni intercorrono tra una migrazione e l'altra
+
+END

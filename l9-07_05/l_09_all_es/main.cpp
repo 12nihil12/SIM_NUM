@@ -1,6 +1,8 @@
 #include <iostream> 
 #include <string>
 #include <fstream>
+
+
 #include "random.h"
 #include "globe.h"
 #include "path.h"
@@ -13,26 +15,8 @@ using namespace std;
 using namespace arma;
 int main(int argc, char *argv[]){
 
-    
-    if(argc!=2){
-        cout<< "Uso del programma: " << argv[0] << " <0/1>" <<endl; 
-        cout << "0 per città sulla circonferenza"<<endl; 
-        cout << "1 per città nel quadrato"<<endl; 
-        return 0; 
-    }
 
-    char which; 
 
-    if(stoi(argv[1])==0){
-        which='C'; 
-    }else if(stoi(argv[1])==1){
-        which='S'; 
-    }else{
-        cout<< "Uso del programma " << argv[0] << ": ./" << argv[0] << " <0/1>" <<endl; 
-        cout << "0 per città sulla circonferenza"<<endl; 
-        cout << "1 per città nel quadrato"<<endl; 
-        return 0; 
-    }
 
 
     //SETUP GENERATORE
@@ -60,37 +44,102 @@ int main(int argc, char *argv[]){
 
 
 
+/*******************************************************************************************/
 
 
-    /**********************************************************************************/
 
-   int N_cities=34; 
-   int pop_size=200; 
-   int N_generations=1000; 
+//parametri 
+
 
    double Pm=0.05; 
    double Px=0.7; 
    double sel_p=2.0;
 
-    Globe globe(N_cities); 
+
+
+    int N_cities,pop_size,N_gen; 
+    bool cities_on_circle; 
+
+
+    ifstream filein; 
+    filein.open("settings.in");
+
+    if(!filein.is_open() or filein.eof()){
+        cout << "Input file not found: using default parameters: " << endl; 
+
+        cout << "Number_of_cities=34 \n Population_size = 100 \n Number_of_generations = 1000 \n Cities_on_circle = 1" << endl; 
+
+
+        N_cities=34;
+        pop_size=100; 
+        N_gen=1000; 
+        cities_on_circle=true; 
+
+
+    }
+
+    
+    filein >> property; 
+    
+    while(!filein.eof()){
+
+        
+        if      (property == "Population_size")          filein >> pop_size;
+        else if (property == "Number_of_cities")         filein >> N_cities;
+        else if (property == "Number_of_generations")    filein >> N_gen;
+        else if (property == "Cities_on_circle")         filein >> cities_on_circle;
+        else if (property=="END") break; 
+
+        filein.ignore(numeric_limits<streamsize>::max(), '\n'); //salta i commenti
+
+        filein>>property; 
+
+    }
+
+
+
+    if(N_gen<=0,pop_size<=0){
+        cout << "Invalid parameters, using default: " << endl; 
+
+        cout << "Number_of_cities=34 \n Population_size = 100 \n Number_of_generations = 1000 \n Cities_on_circle = 1" << endl; 
+        
+        N_cities=34;
+        pop_size=100; 
+        N_gen=1000; 
+        cities_on_circle=true; 
+
+    }
+
+
+
+    /*******************************************************************************************/
+
+
+    //Output
 
     ofstream fout; 
-    string filename1,filename2;
+    string cities_file,paths_file;
     
- 
+
+    /*******************************************************************************************/
+
+    
+    //Mappa e popolazione
 
 
+    Globe globe(N_cities); 
 
-    if(which=='C'){
+
+    if(cities_on_circle){
         globe.Fill_Circumference(1.0,&rnd);
-        filename1="cities_on_circle.csv"; 
-        filename2="circle_paths.csv"; 
+        cities_file="cities_on_circle.csv"; 
+        paths_file="circle_paths.csv"; 
 
 
     }else{
         globe.Fill_Square(1.0,&rnd); 
-        filename1="cities_in_square.csv"; 
-        filename2="square_paths.csv"; 
+        cities_file="cities_in_square.csv"; 
+        paths_file="square_paths.csv"; 
 
 
 
@@ -99,33 +148,42 @@ int main(int argc, char *argv[]){
     
     globe.Calculate_distances();
 
-    fout.open(filename1); 
-    fout << left << setw(15) << "x" << "y" <<endl; 
+    fout.open(cities_file); 
     globe.Print_Cities(fout);
-
-    
-
     fout.close();
 
-    fout.open(filename2);
+    fout.open(paths_file);
+
+    fout <<setw(6) << "Gen" << setw(12) << "Avg_len" << setw(12) << "Best_len" << "     "<< "Best_path" << endl; 
 
 
-    fout << left << "Gen     Best path" << endl; 
+
+    /*******************************************************************************************/
+
+
+    //Popolazione
 
     Population pop(pop_size,&globe,&rnd); 
 
     pop.Initialize(Pm,Px,sel_p); 
 
 
-    for(int i=0; i < N_generations; i++){
+    /*******************************************************************************************/
+
+
+
+    
+    for(int i=0; i < N_gen; i++){
 
         pop.Order(); //Ordina la generazione corrente
 
         
-        fout << i << "      "; //stampa la generazione
-        pop.Get_individual(0).Printwlen(fout); //stampa il miglior percorso
-
-        pop.Spawn(); //Crea la nuova generazione
+        //stampa i risultati: generazione, lunghezza media della metà migliore della popolazione, lunghezza del miglior percorso
+        fout << setw(6)  <<  i << setw(12) << pop.Get_best_half_avg_len() << setw(12) << pop.Get_individual(0).Get_len()<<"     ";
+        //miglior percorso
+        pop.Get_individual(0).Get_chromosome()->raw_print(fout); 
+       
+        pop.New_generation(); //Crea la nuova generazione
 
      
 

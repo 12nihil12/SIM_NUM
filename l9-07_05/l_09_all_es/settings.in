@@ -1,0 +1,6 @@
+Number_of_cities 34
+Population_size 500 
+Number_of_generations 1000
+Cities_on_circle 0                         #1 città sulla circonferenza, 0 nel quadrato
+
+END
